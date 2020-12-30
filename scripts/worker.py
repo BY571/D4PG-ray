@@ -2,7 +2,7 @@ import gym
 import numpy as np
 import ray
 from .networks import Actor, DeepActor
-
+from .utils import OUNoise
 
 
 
@@ -39,11 +39,17 @@ class Worker(object):
         action_high = env.action_space.high
         action_low = env.action_space.low
 
+        if config.noise == "ou":
+            noise_func = OUNoise(size=action_size, seed=config.seed+self.worker_id)
+        else:
+            noise_func = None
+
+
         # create actor based on config details
         if confg.d2rl == 1:
-            actor = DeepActor(state_size, action_size, self.config.seed, hidden_size=self.config.layer_size)
+            actor = DeepActor(state_size, action_size, noise=noise_func, noise_type=config.noise, seed=self.config.seed, hidden_size=self.config.layer_size)
         else:
-            actor = Actor(state_size, action_size, self.config.seed, hidden_size=self.config.layer_size)
+            actor = Actor(state_size, action_size, noise=noise_func, noise_type=config.noise, seed=self.config.seed, hidden_size=self.config.layer_size)
 
         with torch.no_grad():
             while ray.get(self.shared_storage.get_training_counter.remote()) < self.config.training_steps:
@@ -55,7 +61,7 @@ class Worker(object):
                 step = 0
                 
                 while step <= self.config.max_moves:
-                    action = agent.act(state)
+                    action = agent.act(state, add_noise=True)
                     action_clipped = np.clip(action*action_high, action_low, action_high)
                     next_state, reward, done, _ = env.step(action_clipped)
                     # add experience to replay buffer

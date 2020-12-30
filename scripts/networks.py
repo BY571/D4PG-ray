@@ -19,7 +19,7 @@ def weight_init_xavier(layers):
 class Actor(nn.Module):
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size, action_size, seed, hidden_size=256):
+    def __init__(self, state_size, action_size, noise, noise_type, seed, hidden_size=256):
         """Initialize parameters and build model.
         Params
         ======
@@ -36,6 +36,8 @@ class Actor(nn.Module):
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, action_size)
         self.reset_parameters()
+        self.noise = noise
+        self.noise_type = noise_type
 
     def reset_parameters(self):
         self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
@@ -47,6 +49,22 @@ class Actor(nn.Module):
         x = torch.relu(self.fc1(state)) #self.batch_norm
         x = torch.relu(self.fc2(x))
         return torch.tanh(self.fc3(x))
+
+    def act(self, state, add_noise=True, epsilon=1):
+        """Returns actions for given state as per current policy."""
+        state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
+
+        assert state.shape == (1,self.state_size), "shape: {}".format(state.shape)
+        self.actor_local.eval()
+        with torch.no_grad():
+                action = self.forward(state).cpu().data.numpy().squeeze(0)
+        self.actor_local.train()
+        if add_noise:
+            if self.noise_type == "ou":
+                action += self.noise.sample() * epsilon
+            else:
+                action += epsilon * np.random.normal(0, scale=1)
+        return action #np.clip(action, -1, 1)
 
 
 class Critic(nn.Module):
@@ -164,7 +182,7 @@ class IQN(nn.Module):
 class DeepActor(nn.Module):
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size, action_size, seed, hidden_size=256):
+    def __init__(self, state_size, action_size, noise, noise_type, seed, hidden_size=256):
         """Initialize parameters and build model.
         Params
         ======
@@ -184,6 +202,8 @@ class DeepActor(nn.Module):
         self.fc4 = nn.Linear(self.input_size, hidden_size)
         self.fc5 = nn.Linear(hidden_size, action_size)
         self.reset_parameters()
+        self.noise = noise
+        self.noise_type = noise_type
 
     def reset_parameters(self):
         self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
@@ -203,6 +223,21 @@ class DeepActor(nn.Module):
         x = torch.relu(self.fc4(x))
         return torch.tanh(self.fc5(x))
 
+    def act(self, state, add_noise=True, epsilon):
+        """Returns actions for given state as per current policy."""
+        state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
+
+        assert state.shape == (1,self.state_size), "shape: {}".format(state.shape)
+        self.actor_local.eval()
+        with torch.no_grad():
+                action = self.forward(state).cpu().data.numpy().squeeze(0)
+        self.actor_local.train()
+        if add_noise:
+            if self.noise_type == "ou":
+                action += self.noise.sample() * epsilon
+            else:
+                action += epsilon * np.random.normal(0, scale=1)
+        return action #np.clip(action, -1, 1)
 
 class DeepCritic(nn.Module):
     """Critic (Value) Model."""

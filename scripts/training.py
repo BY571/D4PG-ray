@@ -4,6 +4,8 @@ from .replay_buffer import ReplayBuffer, PrioritizedReplay
 import gym
 from .networks import DeepActor, Actor, DeepCritic, Critic, IQN, DeepIQN
 from .learner import Learner
+from .worker import Worker
+import ray
 
 
 
@@ -27,10 +29,10 @@ def evaluation(config, shared_storage):
 
 
     # create actor based on config details
-    if confg.d2rl == 1:
-        actor = DeepActor(self.config.state_size, self.config.action_size, self.config.seed, hidden_size=self.config.layer_size)
+    if config.d2rl == 1:
+        actor = DeepActor(config.state_size, config.action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
     else:
-        actor = Actor(self.config.state_size, self.config.action_size, self.config.seed, hidden_size=self.config.layer_size)
+        actor = Actor(config.state_size, config.action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
 
     with torch.no_grad():
         while ray.get(shared_storage.get_training_counter.remote()) < config.training_steps:
@@ -71,8 +73,8 @@ def train(config, summary_writer):
     """
     # build environment
     env = gym.make(config.env)
-    config.state_size = env.observation_space.shape
-    config.action_size = env.action_space.shape
+    config.state_size = env.observation_space.shape[0]
+    config.action_size = env.action_space.shape[0]
     config.action_high = env.action_space.high
     config.action_low = env.action_space.low
 

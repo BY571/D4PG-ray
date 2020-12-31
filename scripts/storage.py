@@ -1,5 +1,6 @@
 import ray
 import gym
+from .networks import Actor, DeepActor  
 
 
 @ray.remote
@@ -17,10 +18,10 @@ class SharedStorage(object):
         self.interaction_counter = 0
 
         # create actor based on config details
-        if confg.d2rl == 1:
-            self.actor = DeepActor(config.state_size, config.action_size, config.seed, hidden_size=config.layer_size)
+        if config.d2rl == 1:
+            self.actor = DeepActor(config.state_size, config.action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
         else:
-            self.actor = Actor(config.state_size, config.action_size, config.seed, hidden_size=config.layer_size)
+            self.actor = Actor(config.state_size, config.action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
         self.evaluation_reward_history = {} # key: learning step, value: reward
 
     def get_weights(self):

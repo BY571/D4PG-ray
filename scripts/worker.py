@@ -31,7 +31,7 @@ class Worker(object):
         print("started worker: {}".format(self.worker_id))
 
         # build environment
-        env = gym.make(config.env)
+        env = gym.make(self.config.env)
         env.seed(self.worker_id)
 
         state_size = env.observation_space.shape
@@ -39,17 +39,17 @@ class Worker(object):
         action_high = env.action_space.high
         action_low = env.action_space.low
 
-        if config.noise == "ou":
-            noise_func = OUNoise(size=action_size, seed=config.seed+self.worker_id)
+        if self.config.noise == "ou":
+            noise_func = OUNoise(size=action_size, seed=self.config.seed+self.worker_id)
         else:
             noise_func = None
 
 
         # create actor based on config details
-        if confg.d2rl == 1:
-            actor = DeepActor(state_size, action_size, noise=noise_func, noise_type=config.noise, seed=self.config.seed, hidden_size=self.config.layer_size)
+        if self.config.d2rl == 1:
+            actor = DeepActor(state_size, action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=self.config.layer_size)
         else:
-            actor = Actor(state_size, action_size, noise=noise_func, noise_type=config.noise, seed=self.config.seed, hidden_size=self.config.layer_size)
+            actor = Actor(state_size, action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=self.config.layer_size)
 
         with torch.no_grad():
             while ray.get(self.shared_storage.get_training_counter.remote()) < self.config.training_steps:

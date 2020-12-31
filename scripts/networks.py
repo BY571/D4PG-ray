@@ -50,7 +50,7 @@ class Actor(nn.Module):
         x = torch.relu(self.fc2(x))
         return torch.tanh(self.fc3(x))
 
-    def act(self, state, add_noise=True, epsilon=1):
+    def act(self, state, add_noise=True, epsilon=1.):
         """Returns actions for given state as per current policy."""
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
 
@@ -223,7 +223,7 @@ class DeepActor(nn.Module):
         x = torch.relu(self.fc4(x))
         return torch.tanh(self.fc5(x))
 
-    def act(self, state, add_noise=True, epsilon):
+    def act(self, state, add_noise=True, epsilon=1.):
         """Returns actions for given state as per current policy."""
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
 

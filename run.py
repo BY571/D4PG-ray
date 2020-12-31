@@ -9,8 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 import argparse
 from scripts.agent import Agent
 import json
-from scripts import training
-
+from scripts.training import train
 
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("--env", type=str,default="Pendulum-v0", help="Environment name, default = Pendulum-v0")
@@ -20,6 +19,7 @@ parser.add_argument("--munchausen", type=int, default=0, choices=[0,1], help="Ad
 parser.add_argument("--iqn", type=int, choices=[0,1], default=0, help="Use distributional IQN Critic if set to 1, default = 1")
 parser.add_argument("--noise", type=str, choices=["ou", "gauss"], default="OU", help="Choose noise type: ou = OU-Noise, gauss = Gaussian noise, default ou")
 parser.add_argument("--info", type=str, help="Information or name of the run")
+parser.add_argument("--device", type=str, default="cpu", help="Training device, default= cpu")
 parser.add_argument("--d2rl", type=int, choices=[0,1], default=0, help="Uses Deep Actor and Deep Critic Networks if set to 1 as described in the D2RL Paper: https://arxiv.org/pdf/2010.09163.pdf, default=0")
 parser.add_argument("--frames", type=int, default=20000, help="The amount of training interactions with the environment, default is 100000")
 parser.add_argument("--eval_every", type=int, default=1000, help="Number of interactions after which the evaluation runs are performed, default = 1000")
@@ -40,10 +40,10 @@ args = parser.parse_args()
 
 
 if __name__ == "__main__":
+    ray.init()
     writer = SummaryWriter("runs/"+args.info)
-
     # if training
-    trained_model = training(args, writer)
+    trained_model = train(args, writer)
     # else:
         # load_weights
         # evaluate

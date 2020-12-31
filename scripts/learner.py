@@ -2,16 +2,18 @@
 from .networks import DeepActor, Actor, DeepCritic, Critic, IQN, DeepIQN
 import numpy as np 
 import torch
+import torch.optim as optim
+import ray
 
 class Learner():
-    def __init__(config, shared_storage, replay_buffer, summary_writer):
+    def __init__(self, config, shared_storage, replay_buffer, summary_writer):
         self.config = config
         self.shared_storage = shared_storage
         self.replay_buffer = replay_buffer
         self.summary_writer = summary_writer
         self.device = config.device
         self.gamma = config.gamma
-        self.n_step = config.n_step
+        self.n_step = config.nstep
         self.BATCH_SIZE = config.batch_size
         self.per = config.per
 
@@ -26,16 +28,16 @@ class Learner():
 
         # Actor Network (w/ Target Network)
         if not config.d2rl:
-            self.actor_local = Actor(config.state_size, config.action_size, noise=None, noise_type="gauss", config.seed, hidden_size=config.layer_size).to(config.device)
-            self.actor_target = Actor(config.state_size, config.action_size, noise=None, noise_type="gauss", config.seed, hidden_size=config.layer_size).to(config.device)
+            self.actor_local = Actor(config.state_size, config.action_size, noise=None, noise_type="gauss", seed=config.seed, hidden_size=config.layer_size).to(config.device)
+            self.actor_target = Actor(config.state_size, config.action_size, noise=None, noise_type="gauss", seed=config.seed, hidden_size=config.layer_size).to(config.device)
         else:
-            self.actor_local = DeepActor(config.state_size, config.action_size, noise=None, noise_type="gauss", config.seed, hidden_size=config.layer_size).to(config.device)
-            self.actor_target = DeepActor(config.state_size, config.action_size, noise=None, noise_type="gauss", config.seed, hidden_size=config.layer_size).to(config.device)
+            self.actor_local = DeepActor(config.state_size, config.action_size, noise=None, noise_type="gauss", seed=config.seed, hidden_size=config.layer_size).to(config.device)
+            self.actor_target = DeepActor(config.state_size, config.action_size, noise=None, noise_type="gauss", seed=config.seed, hidden_size=config.layer_size).to(config.device)
 
         self.actor_optimizer = optim.Adam(self.actor_local.parameters(), lr=config.lr_a)
 
         # Critic Network (w/ Target Network)
-        if config.distributional:
+        if config.iqn:
             self.update_weights = self.learn_distribution
             if not config.d2rl:
                 self.critic_local = IQN(config.state_size, config.action_size, layer_size=config.layer_size, device=config.device, seed=config.seed, dueling=None, N=self.N).to(config.device)
@@ -57,9 +59,9 @@ class Learner():
 
     
     
-    def train_network():
+    def train_network(self):
     # create critic and target critic 
-        while ray.get(replay_buffer.__len__.remote()) == 0:
+        while ray.get(self.replay_buffer.__len__.remote()) == 0:
             pass#
         
         for i in range(self.config.training_steps):
@@ -248,14 +250,14 @@ class Learner():
                 return critic_loss.detach().cpu().numpy(), actor_loss.detach().cpu().numpy()
 
         
-        def soft_update(self, local_model, target_model):
-            """Soft update model parameters.
-            θ_target = τ*θ_local + (1 - τ)*θ_target
-            Params
-            ======
-                local_model: PyTorch model (weights will be copied from)
-                target_model: PyTorch model (weights will be copied to)
-                tau (float): interpolation parameter 
-            """
-            for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
-                target_param.data.copy_(self.TAU*local_param.data + (1.0-self.TAU)*target_param.data)
+    def soft_update(self, local_model, target_model):
+        """Soft update model parameters.
+        θ_target = τ*θ_local + (1 - τ)*θ_target
+        Params
+        ======
+            local_model: PyTorch model (weights will be copied from)
+            target_model: PyTorch model (weights will be copied to)
+            tau (float): interpolation parameter 
+        """
+        for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
+            target_param.data.copy_(self.TAU*local_param.data + (1.0-self.TAU)*target_param.data)

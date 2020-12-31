@@ -26,9 +26,9 @@ class ReplayBuffer:
         self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
         self.seed = random.seed(config.seed)
         self.gamma = config.gamma
-        self.n_step_buffer = {str(w): deque(maxlen=config.n_step) for w in range(config.worker_number)} 
+        self.n_step_buffer = {str(w): deque(maxlen=config.nstep) for w in range(config.worker_number)} 
         self.iter_ = 0
-        self.n_step = config.n_step
+        self.n_step = config.nstep
 
     def add(self, state, action, reward, next_state, done, worker_number):
         """Add a new experience to memory."""

@@ -1,4 +1,5 @@
-
+import torch
+import numpy as np
 from .storage import SharedStorage
 from .replay_buffer import ReplayBuffer, PrioritizedReplay
 import gym
@@ -30,9 +31,9 @@ def evaluation(config, shared_storage):
 
     # create actor based on config details
     if config.d2rl == 1:
-        actor = DeepActor(config.state_size, config.action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
+        actor = DeepActor(config.state_size, config.action_size, noise=None, noise_type=config.noise, seed=config.seed, hidden_size=config.layer_size)
     else:
-        actor = Actor(config.state_size, config.action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
+        actor = Actor(config.state_size, config.action_size, noise=None, noise_type=config.noise, seed=config.seed, hidden_size=config.layer_size)
 
     with torch.no_grad():
         while ray.get(shared_storage.get_training_counter.remote()) < config.training_steps:

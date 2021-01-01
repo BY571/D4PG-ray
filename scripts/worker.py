@@ -1,5 +1,6 @@
 import gym 
 import numpy as np
+import torch
 import ray
 from .networks import Actor, DeepActor
 from .utils import OUNoise
@@ -34,8 +35,8 @@ class Worker(object):
         env = gym.make(self.config.env)
         env.seed(self.worker_id)
 
-        state_size = env.observation_space.shape
-        action_size = env.action_space.shape
+        state_size = env.observation_space.shape[0]
+        action_size = env.action_space.shape[0]
         action_high = env.action_space.high
         action_low = env.action_space.low
 

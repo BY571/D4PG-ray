@@ -16,12 +16,13 @@ class SharedStorage(object):
     def __init__(self, config):
         self.update_counter = 0
         self.interaction_counter = 0
+        self.config = config
 
         # create actor based on config details
         if config.d2rl == 1:
-            self.actor = DeepActor(config.state_size, config.action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
+            self.actor = DeepActor(config.state_size, config.action_size, noise=None, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
         else:
-            self.actor = Actor(config.state_size, config.action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
+            self.actor = Actor(config.state_size, config.action_size, noise=None, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
         self.evaluation_reward_history = {} # key: learning step, value: reward
 
     def get_weights(self):
@@ -31,10 +32,10 @@ class SharedStorage(object):
         return self.actor.set_weights(weights)
 
     def increase_update_coutner(self):
-        self.step_counter += 1
+        self.update_counter += 1
 
     def get_training_counter(self):
-        return self.step_counter
+        return self.update_counter
 
     def set_eval_reward(self, step, rewards):
         self.evaluation_reward_history[step] = rewards

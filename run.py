@@ -22,6 +22,7 @@ parser.add_argument("--info", type=str, help="Information or name of the run")
 parser.add_argument("--device", type=str, default="cpu", help="Training device, default= cpu")
 parser.add_argument("--d2rl", type=int, choices=[0,1], default=0, help="Uses Deep Actor and Deep Critic Networks if set to 1 as described in the D2RL Paper: https://arxiv.org/pdf/2010.09163.pdf, default=0")
 parser.add_argument("--frames", type=int, default=20000, help="The amount of training interactions with the environment, default is 100000")
+parser.add_argument("--training_steps", type=int, default=10000, help="Numnber of backprop steps, default=10000")
 parser.add_argument("--eval_every", type=int, default=1000, help="Number of interactions after which the evaluation runs are performed, default = 1000")
 parser.add_argument("--eval_runs", type=int, default=1, help="Number of evaluation runs performed, default = 1")
 parser.add_argument("--seed", type=int, default=0, help="Seed for the env and torch network weights, default is 0")
@@ -36,6 +37,7 @@ parser.add_argument("-t", "--tau", type=float, default=1e-2, help="Softupdate fa
 parser.add_argument("-g", "--gamma", type=float, default=0.99, help="discount factor gamma, default is 0.99")
 parser.add_argument("--saved_model", type=str, default=None, help="Load a saved model to perform a test run!")
 parser.add_argument("--worker_number", type=int, default=4, help="Number of parallel Worker to gather experience, default = 4")
+parser.add_argument("--checkpoint_intervals", type=int, default=1000, help="Number of checkpoints, defualt 1000")
 args = parser.parse_args()
 
 

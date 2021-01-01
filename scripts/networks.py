@@ -66,6 +66,9 @@ class Actor(nn.Module):
                 action += epsilon * np.random.normal(0, scale=1)
         return action #np.clip(action, -1, 1)
 
+    def set_weights(self, params):
+        pass # set the parameters
+
 
 class Critic(nn.Module):
     """Critic (Value) Model."""

@@ -62,18 +62,18 @@ class Learner():
     def train_network(self):
     # create critic and target critic 
         while ray.get(self.replay_buffer.__len__.remote()) == 0:
-            pass#
-        
-        for i in range(self.config.training_steps):
+            pass
+        if ray.get(self.replay_buffer.__len__.remote()) > self.BATCH_SIZE:
+            for i in range(self.config.training_steps):
 
-            batch = ray.get(self.replay_buffer.sample.remote()) 
-            loss = update_weights(batch)
+                batch = ray.get(self.replay_buffer.sample.remote()) 
+                loss = update_weights(batch)
 
-            self.summary_writer.add_scalar("loss", loss, i)
+                self.summary_writer.add_scalar("loss", loss, i)
 
-            ray.get(self.shared_storage.set_weights.remote(self.actor_local.to("cpu").state_dict()))
-            ray.get(self.shared_storage.incr_training_counter.remote())
-            self.actor_local.to(config.device)
+                ray.get(self.shared_storage.set_weights.remote(self.actor_local.to("cpu").state_dict()))
+                ray.get(self.shared_storage.incr_training_counter.remote())
+                self.actor_local.to(config.device)
 
 
 

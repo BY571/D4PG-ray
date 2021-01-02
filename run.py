@@ -37,7 +37,7 @@ parser.add_argument("-t", "--tau", type=float, default=1e-2, help="Softupdate fa
 parser.add_argument("-g", "--gamma", type=float, default=0.99, help="discount factor gamma, default is 0.99")
 parser.add_argument("--saved_model", type=str, default=None, help="Load a saved model to perform a test run!")
 parser.add_argument("--worker_number", type=int, default=4, help="Number of parallel Worker to gather experience, default = 4")
-parser.add_argument("--checkpoint_intervals", type=int, default=1000, help="Number of checkpoints, defualt 1000")
+parser.add_argument("--checkpoint_interval", type=int, default=100, help="Number of checkpoints, defualt 1000")
 args = parser.parse_args()
 
 

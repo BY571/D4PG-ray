@@ -61,12 +61,12 @@ class Worker(object):
                 done = False
                 step = 0
                 
-                while step <= self.config.max_moves:
-                    action = agent.act(state, add_noise=True)
+                while True:
+                    action = actor.act(state, add_noise=True)
                     action_clipped = np.clip(action*action_high, action_low, action_high)
                     next_state, reward, done, _ = env.step(action_clipped)
                     # add experience to replay buffer
-                    self.replay_buffer.add.remote(state, action, reward, next_state, done, worker_id)
+                    self.replay_buffer.add.remote(state, action, reward, next_state, done, self.worker_id)
                     
                     state = next_state
                     step += 1

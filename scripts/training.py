@@ -27,6 +27,8 @@ def evaluation(config, shared_storage):
     # build environment
     env = gym.make(config.env)
     env.seed(config.seed)
+    action_high = config.action_high
+    action_low = config.action_low
 
 
     # create actor based on config details
@@ -41,12 +43,11 @@ def evaluation(config, shared_storage):
                 # run eval game
                 actor.set_weights(ray.get(shared_storage.get_weights.remote()))
                 counter = ray.get(shared_storage.get_interactions.remote())
-                env = config.create_new_game(config.seed)
                 state = env.reset()
                 done = False
                 rewards = 0
                 while not done:
-                    action = agent.act(state)
+                    action = actor.act(state)
                     action_clipped = np.clip(action*action_high, action_low, action_high)
                     state, reward, done, _ = env.step(action_clipped)
                     rewards += reward
@@ -92,9 +93,10 @@ def train(config, summary_writer):
     workers = [Worker.remote(worker_id, config, storage, replay_buffer) for worker_id in range(0, config.worker_number)]
     for w in workers: w.run.remote()
     # add evaluation worker 
-    workers += [evaluation.remote(config, storage)]
+    #workers += [evaluation.remote(config, storage)]
     learner = Learner(config, storage, replay_buffer, summary_writer)
     learner.train_network()
+    print(workers)
     ray.wait(workers, len(workers))
 
     return ray.get(storage.get_weights.remote())

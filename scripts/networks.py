@@ -31,6 +31,7 @@ class Actor(nn.Module):
         """
         super(Actor, self).__init__()
         self.seed = torch.manual_seed(seed)
+        self.state_size = state_size
         self.fc1 = nn.Linear(state_size, hidden_size)
         #self.batch_norm = nn.BatchNorm1d(hidden_size) ## seems to improve the final performance a lot
         self.fc2 = nn.Linear(hidden_size, hidden_size)
@@ -38,6 +39,7 @@ class Actor(nn.Module):
         self.reset_parameters()
         self.noise = noise
         self.noise_type = noise_type
+        self.device = "cpu"
 
     def reset_parameters(self):
         self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
@@ -55,10 +57,10 @@ class Actor(nn.Module):
         state = torch.from_numpy(state).float().unsqueeze(0).to(self.device)
 
         assert state.shape == (1,self.state_size), "shape: {}".format(state.shape)
-        self.actor_local.eval()
+        self.eval()
         with torch.no_grad():
                 action = self.forward(state).cpu().data.numpy().squeeze(0)
-        self.actor_local.train()
+        self.train()
         if add_noise:
             if self.noise_type == "ou":
                 action += self.noise.sample() * epsilon
@@ -67,7 +69,10 @@ class Actor(nn.Module):
         return action #np.clip(action, -1, 1)
 
     def set_weights(self, params):
-        pass # set the parameters
+        self.load_state_dict(params)
+    
+    def get_weights(self):
+        return self.state_dict()
 
 
 class Critic(nn.Module):

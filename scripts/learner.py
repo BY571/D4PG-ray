@@ -62,10 +62,9 @@ class Learner():
         
         self.critic_optimizer = optim.Adam(self.critic_local.parameters(), lr=config.lr_c, weight_decay=0)
 
-    
-    
+     
     def train_network(self):
-
+        # wait until buffer has batch size
         while ray.get(self.replay_buffer.__len__.remote()) < self.BATCH_SIZE:
             pass
             
@@ -86,9 +85,7 @@ class Learner():
             self.actor_local.to(self.config.device)
 
 
-
-
-    # different learn functions 
+    ######  different learn functions  ######
     def learn_(self, experiences):
             """Update policy and value parameters using given batch of experience tuples.
             Q_targets = r + γ * critic_target(next_state, actor_target(next_state))
@@ -163,9 +160,7 @@ class Learner():
             if self.per:
                 self.memory.update_priorities(idx, np.clip(abs(td_error.data.cpu().numpy()),-1,1))
             # ----------------------- update epsilon and noise ----------------------- #
-            
-            #self.epsilon *= self.EPSILON_DECAY
-            
+                        
             return critic_loss.detach().cpu().numpy(), actor_loss.detach().cpu().numpy()
                 
     def learn_distribution(self, experiences):

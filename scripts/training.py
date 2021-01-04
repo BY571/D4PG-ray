@@ -37,6 +37,8 @@ def evaluation(config, shared_storage):
     else:
         actor = Actor(config.state_size, config.action_size, noise=None, noise_type=config.noise, seed=config.seed, hidden_size=config.layer_size)
 
+    actor.eval()
+
     with torch.no_grad():
         while ray.get(shared_storage.get_training_counter.remote()) < config.training_steps:
             if ray.get(shared_storage.get_training_counter.remote()) % config.checkpoint_interval == 0:
@@ -53,11 +55,12 @@ def evaluation(config, shared_storage):
                     rewards += reward
                     if done:
                         break
-                
-                print("Steps: {} | Rewards: {} | Learning_steps: {} ".format(counter, rewards, ray.get(shared_storage.get_training_counter.remote())))
+                env.close()
+                print("Actor Steps: {} | Evaluation Rewards: {} | Learning Steps: {} ".format(counter, rewards, ray.get(shared_storage.get_training_counter.remote())))
                 shared_storage.set_eval_reward.remote(counter, rewards)
 
-        env.close()
+
+        
 
 
 
@@ -80,6 +83,7 @@ def train(config, summary_writer):
     config.action_high = env.action_space.high
     config.action_low = env.action_space.low
 
+    config.batch_size = config.worker_number*config.batch_size
 
 
     # initialize storage and replay buffer 
@@ -91,12 +95,14 @@ def train(config, summary_writer):
 
     # create a number of distributed worker 
     workers = [Worker.remote(worker_id, config, storage, replay_buffer) for worker_id in range(0, config.worker_number)]
+    # collect experience
     for w in workers: w.run.remote()
     # add evaluation worker 
-    #workers += [evaluation.remote(config, storage)]
+    evals =  [evaluation.remote(config, storage)]
+    # Create Learner
     learner = Learner(config, storage, replay_buffer, summary_writer)
+    # learn
     learner.train_network()
-    print(workers)
-    ray.wait(workers, len(workers))
 
+    ray.get(evals)
     return ray.get(storage.get_weights.remote())

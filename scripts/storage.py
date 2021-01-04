@@ -39,7 +39,10 @@ class SharedStorage(object):
 
     def set_eval_reward(self, step, rewards):
         self.evaluation_reward_history[step] = rewards
-    
+
+    def get_latest_reward(self):
+        return list(self.evaluation_reward_history.keys())[-1]
+
     def incr_interactions(self, steps):
         self.interaction_counter += steps
     

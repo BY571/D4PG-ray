@@ -2,6 +2,8 @@
 from .networks import DeepActor, Actor, DeepCritic, Critic, IQN, DeepIQN
 import numpy as np 
 import torch
+import torch.nn.functional as F
+from torch.nn.utils import clip_grad_norm_
 import torch.optim as optim
 import ray
 
@@ -16,6 +18,7 @@ class Learner():
         self.n_step = config.nstep
         self.BATCH_SIZE = config.batch_size
         self.per = config.per
+        self.TAU = config.tau
 
         # distributional Values
         self.N = 32
@@ -26,6 +29,8 @@ class Learner():
         self.lo = -1
         self.alpha = 0.9
 
+
+        # create critic and target critic 
         # Actor Network (w/ Target Network)
         if not config.d2rl:
             self.actor_local = Actor(config.state_size, config.action_size, noise=None, noise_type="gauss", seed=config.seed, hidden_size=config.layer_size).to(config.device)
@@ -60,20 +65,25 @@ class Learner():
     
     
     def train_network(self):
-    # create critic and target critic 
-        while ray.get(self.replay_buffer.__len__.remote()) == 0:
+
+        while ray.get(self.replay_buffer.__len__.remote()) < self.BATCH_SIZE:
             pass
-        if ray.get(self.replay_buffer.__len__.remote()) > self.BATCH_SIZE:
-            for i in range(self.config.training_steps):
+            
+        for i in range(self.config.training_steps):
 
-                batch = ray.get(self.replay_buffer.sample.remote()) 
-                loss = update_weights(batch)
+            batch = ray.get(self.replay_buffer.sample.remote()) 
+            c_loss, a_loss = self.update_weights(batch)
 
-                self.summary_writer.add_scalar("loss", loss, i)
+            self.summary_writer.add_scalar("Critic loss", c_loss, i)
+            self.summary_writer.add_scalar("Actor loss", a_loss, i)
+            steps = ray.get(self.shared_storage.get_interactions.remote())
+            self.summary_writer.add_scalar("Evaluation Reward", 
+                                ray.get(self.shared_storage.get_latest_reward.remote()), 
+                                steps)
 
-                ray.get(self.shared_storage.set_weights.remote(self.actor_local.to("cpu").state_dict()))
-                ray.get(self.shared_storage.incr_training_counter.remote())
-                self.actor_local.to(config.device)
+            ray.get(self.shared_storage.set_weights.remote(self.actor_local.to("cpu").state_dict()))
+            ray.get(self.shared_storage.increase_update_coutner.remote())
+            self.actor_local.to(self.config.device)
 
 
 
@@ -154,7 +164,7 @@ class Learner():
                 self.memory.update_priorities(idx, np.clip(abs(td_error.data.cpu().numpy()),-1,1))
             # ----------------------- update epsilon and noise ----------------------- #
             
-            self.epsilon *= self.EPSILON_DECAY
+            #self.epsilon *= self.EPSILON_DECAY
             
             return critic_loss.detach().cpu().numpy(), actor_loss.detach().cpu().numpy()
                 

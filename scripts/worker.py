@@ -53,7 +53,7 @@ class Worker(object):
             actor = Actor(state_size, action_size, noise=noise_func, noise_type=self.config.noise, seed=self.config.seed, hidden_size=self.config.layer_size)
 
         with torch.no_grad():
-            while ray.get(self.shared_storage.get_training_counter.remote()) < self.config.training_steps:
+            while ray.get(self.shared_storage.get_training_counter.remote()) < self.config.frames:
                 # get current actor weights
                 actor.set_weights(ray.get(self.shared_storage.get_weights.remote()))
                 actor.eval()
@@ -74,4 +74,4 @@ class Worker(object):
                         break
                 # add executed steps to step counter
                 ray.get(self.shared_storage.incr_interactions.remote(step))
-                env.close()
+            env.close()

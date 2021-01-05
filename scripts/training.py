@@ -46,14 +46,14 @@ def evaluation(config, shared_storage):
                 done = False
                 rewards = 0
                 while not done:
-                    action = actor.act(state)
+                    action = actor.act(state, add_noise=False)
                     action_clipped = np.clip(action*action_high, action_low, action_high)
                     state, reward, done, _ = env.step(action_clipped)
                     rewards += reward
                     if done:
                         break
                 env.close()
-                print("Actor Steps: {} | Evaluation Rewards: {:.2f} | Learning Steps: {} ".format(counter, rewards, step))
+                print("Actor Steps: {} | Evaluation Reward: {:.2f} | Learning Steps: {} ".format(counter, rewards, step))
                 shared_storage.set_eval_reward.remote(counter, step, rewards)
 
 
@@ -128,7 +128,7 @@ def test(config, actor_weights):
             rewards = 0
             env.render()
             while not done:
-                action = actor.act(state)
+                action = actor.act(state, add_noise=False)
                 action_clipped = np.clip(action*action_high, action_low, action_high)
                 state, reward, done, _ = env.step(action_clipped)
                 rewards += reward

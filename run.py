@@ -20,7 +20,7 @@ parser.add_argument("--noise", type=str, choices=["ou", "gauss"], default="OU", 
 parser.add_argument("--info", type=str, help="Information or name of the run")
 parser.add_argument("--device", type=str, default="cpu", help="Training device, default= cpu")
 parser.add_argument("--d2rl", type=int, choices=[0,1], default=0, help="Uses Deep Actor and Deep Critic Networks if set to 1 as described in the D2RL Paper: https://arxiv.org/pdf/2010.09163.pdf, default=0")
-parser.add_argument("--frames", type=int, default=30000, help="The amount of training interactions with the environment, default is 100000")
+parser.add_argument("--frames", type=int, default=1000000, help="The amount of training interactions with the environment, default is 1000000")
 parser.add_argument("--training_steps", type=int, default=3000, help="Numnber of backprop steps, default=10000")
 parser.add_argument("--seed", type=int, default=0, help="Seed for the env and torch network weights, default is 0")
 parser.add_argument("--lr_a", type=float, default=5e-4, help="Actor learning rate of adapting the network weights, default is 5e-4")

@@ -27,7 +27,7 @@ parser.add_argument("--seed", type=int, default=0, help="Seed for the env and to
 parser.add_argument("--lr_a", type=float, default=5e-4, help="Actor learning rate of adapting the network weights, default is 5e-4")
 parser.add_argument("--lr_c", type=float, default=5e-4, help="Critic learning rate of adapting the network weights, default is 5e-4")
 parser.add_argument("--layer_size", type=int, default=256, help="Number of nodes per neural network layer, default is 256")
-parser.add_argument("-repm", "--replay_memory", type=int, default=int(1e6), help="Size of the Replay memory, default is 1e6")
+parser.add_argument("-repm", "--replay_memory", type=int, default=int(1e5), help="Size of the Replay memory, default is 1e5")
 parser.add_argument("-bs", "--batch_size", type=int, default=256, help="Batch size, default is 256")
 parser.add_argument("-t", "--tau", type=float, default=1e-2, help="Softupdate factor tau, default is 1e-3") #for per 1e-2 for regular 1e-3 -> Pendulum!
 parser.add_argument("-g", "--gamma", type=float, default=0.99, help="discount factor gamma, default is 0.99")

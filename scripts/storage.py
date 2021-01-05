@@ -23,7 +23,9 @@ class SharedStorage(object):
             self.actor = DeepActor(config.state_size, config.action_size, noise=None, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
         else:
             self.actor = Actor(config.state_size, config.action_size, noise=None, noise_type=self.config.noise, seed=self.config.seed, hidden_size=config.layer_size)
-        self.evaluation_reward_history = {} # key: learning step, value: reward
+        self.evaluation_reward_history = {} # key: environment step, value: reward
+        self.evaluation_reward_by_learning = {} # key: update step, value: reward
+        
 
     def get_weights(self):
         return self.actor.get_weights()
@@ -37,8 +39,9 @@ class SharedStorage(object):
     def get_training_counter(self):
         return self.update_counter
 
-    def set_eval_reward(self, step, rewards):
+    def set_eval_reward(self, step, update_number, rewards):
         self.evaluation_reward_history[step] = rewards
+        self.evaluation_reward_by_learning[update_number] = rewards
 
     def get_latest_reward(self):
         return list(self.evaluation_reward_history.keys())[-1]
@@ -48,3 +51,6 @@ class SharedStorage(object):
     
     def get_interactions(self):
         return self.interaction_counter
+    
+    def get_update_hist(self):
+        return self.evaluation_reward_by_learning

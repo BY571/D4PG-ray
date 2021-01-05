@@ -13,13 +13,20 @@ class Learner():
         self.shared_storage = shared_storage
         self.replay_buffer = replay_buffer
         self.summary_writer = summary_writer
-        self.device = config.device
         self.gamma = config.gamma
         self.n_step = config.nstep
         self.BATCH_SIZE = config.batch_size
         self.per = config.per
         self.TAU = config.tau
+        if config.device == "cpu":
+            self.device = config.device
+        else:
+            if torch.cuda.is_available():
+                self.device = torch.device(config.device)
+            else:
+                print("Cuda is not available!")
 
+        print("Running Learner on Device: {}".format(self.device))
         # distributional Values
         self.N = 32
         self.entropy_coeff = 0.001
@@ -79,7 +86,6 @@ class Learner():
             self.summary_writer.add_scalar("Evaluation Reward", 
                                 ray.get(self.shared_storage.get_latest_reward.remote()), 
                                 steps)
-
             ray.get(self.shared_storage.set_weights.remote(self.actor_local.to("cpu").state_dict()))
             ray.get(self.shared_storage.increase_update_coutner.remote())
             self.actor_local.to(self.config.device)
@@ -98,19 +104,25 @@ class Learner():
                 gamma (float): discount factor
             """
             states, actions, rewards, next_states, dones, idx, weights = experiences
+            states = states.to(self.config.device)
+            actions = actions.to(self.config.device)
+            rewards = rewards.to(self.config.device)
+            next_states = next_states.to(self.config.device)
+            dones = dones.to(self.config.device)
+
 
             # ---------------------------- update critic ---------------------------- #
             if not self.munchausen:
                 # Get predicted next-state actions and Q values from target models
                 with torch.no_grad():
-                    actions_next = self.actor_target(next_states.to(self.device))
-                    Q_targets_next = self.critic_target(next_states.to(self.device), actions_next.to(self.device))
+                    actions_next = self.actor_target(next_states)
+                    Q_targets_next = self.critic_target(next_states, actions_next)
                     # Compute Q targets for current states (y_i)
                     Q_targets = rewards + (self.gamma**self.n_step * Q_targets_next * (1 - dones))
             else:
                 with torch.no_grad():
-                    actions_next = self.actor_target(next_states.to(self.device))
-                    q_t_n = self.critic_target(next_states.to(self.device), actions_next.to(self.device))
+                    actions_next = self.actor_target(next_states)
+                    q_t_n = self.critic_target(next_states, actions_next)
                     # calculate log-pi - in the paper they subtracted the max_Q value from the Q to ensure stability since we only predict the max value we dont do that
                     # this might cause some instability (?) needs to be tested
                     logsum = torch.logsumexp(\
@@ -136,13 +148,13 @@ class Learner():
             Q_expected = self.critic_local(states, actions)
             if self.per:
                 td_error =  Q_targets - Q_expected
-                critic_loss = (td_error.pow(2)*weights.to(self.device)).mean().to(self.device)
+                critic_loss = (td_error.pow(2)*weights.to(self.config.device)).mean().to(self.device)
             else:
                 critic_loss = F.mse_loss(Q_expected, Q_targets)
             # Minimize the loss
             self.critic_optimizer.zero_grad()
             critic_loss.backward()
-            clip_grad_norm_(self.critic_local.parameters(), 1)
+            clip_grad_norm_(self.critic_local.parameters(), 1.)
             self.critic_optimizer.step()
 
             # ---------------------------- update actor ---------------------------- #
@@ -158,7 +170,7 @@ class Learner():
             self.soft_update(self.critic_local, self.critic_target)
             self.soft_update(self.actor_local, self.actor_target)                     
             if self.per:
-                self.memory.update_priorities(idx, np.clip(abs(td_error.data.cpu().numpy()),-1,1))
+                self.replay_buffer.update_priorities.remote(idx, np.clip(abs(td_error.data.cpu().numpy()),-1,1))
             # ----------------------- update epsilon and noise ----------------------- #
                         
             return critic_loss.detach().cpu().numpy(), actor_loss.detach().cpu().numpy()
@@ -175,7 +187,11 @@ class Learner():
                     gamma (float): discount factor
                 """
                 states, actions, rewards, next_states, dones, idx, weights = experiences
-
+                states = states.to(self.config.device)
+                actions = actions.to(self.config.device)
+                rewards = rewards.to(self.config.device)
+                next_states = next_states.to(self.config.device)
+                dones = dones.to(self.config.device)
                 # ---------------------------- update critic ---------------------------- #
                 # Get predicted next-state actions and Q values from target models
 
@@ -190,8 +206,8 @@ class Learner():
                 else:
                     with torch.no_grad():
                         #### CHECK FOR THE SHAPES!!
-                        actions_next = self.actor_target(next_states.to(self.device))
-                        Q_targets_next, _ = self.critic_target(next_states.to(self.device), actions_next.to(self.device), self.N)
+                        actions_next = self.actor_target(next_states)
+                        Q_targets_next, _ = self.critic_target(next_states, actions_next, self.N)
 
                         q_t_n = Q_targets_next.mean(1)
                         # calculate log-pi - in the paper they subtracted the max_Q value from the Q to ensure stability since we only predict the max value we dont do that
@@ -266,3 +282,11 @@ class Learner():
         """
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(self.TAU*local_param.data + (1.0-self.TAU)*target_param.data)
+
+def calculate_huber_loss(td_errors, k=1.0):
+    """
+    Calculate huber loss element-wisely depending on kappa k.
+    """
+    loss = torch.where(td_errors.abs() <= k, 0.5 * td_errors.pow(2), k * (td_errors.abs() - 0.5 * k))
+    #assert loss.shape == (td_errors.shape[0], 8, 8), "huber loss has wrong shape"
+    return loss

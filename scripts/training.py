@@ -8,17 +8,14 @@ from .learner import Learner
 from .worker import Worker
 import ray
 
-
-
-
-
-
 @ray.remote
 def evaluation(config, shared_storage):
     """
     Runs the evaluation runs every x training steps and add the results to the replay buffer
 
     """
+    ## TODO: DO I need to run this remotely? 
+
     # 1 init model & load weights
     # 2 init new game 
     # 3 run evaluation once number of interactions got reached
@@ -38,11 +35,11 @@ def evaluation(config, shared_storage):
         actor = Actor(config.state_size, config.action_size, noise=None, noise_type=config.noise, seed=config.seed, hidden_size=config.layer_size)
 
     actor.eval()
-
     with torch.no_grad():
         while ray.get(shared_storage.get_training_counter.remote()) < config.training_steps:
-            if ray.get(shared_storage.get_training_counter.remote()) % config.checkpoint_interval == 0:
+            if ray.get(shared_storage.get_training_counter.remote()) % config.checkpoint_interval == 0 and ray.get(shared_storage.get_training_counter.remote()) not in ray.get(shared_storage.get_update_hist.remote()):
                 # run eval game
+                step = ray.get(shared_storage.get_training_counter.remote())
                 actor.set_weights(ray.get(shared_storage.get_weights.remote()))
                 counter = ray.get(shared_storage.get_interactions.remote())
                 state = env.reset()
@@ -56,12 +53,8 @@ def evaluation(config, shared_storage):
                     if done:
                         break
                 env.close()
-                print("Actor Steps: {} | Evaluation Rewards: {} | Learning Steps: {} ".format(counter, rewards, ray.get(shared_storage.get_training_counter.remote())))
-                shared_storage.set_eval_reward.remote(counter, rewards)
-
-
-        
-
+                print("Actor Steps: {} | Evaluation Rewards: {} | Learning Steps: {} ".format(counter, rewards, step))
+                shared_storage.set_eval_reward.remote(counter, step, rewards)
 
 
 def train(config, summary_writer):
@@ -91,7 +84,7 @@ def train(config, summary_writer):
     if config.per == 0:
         replay_buffer = ReplayBuffer.remote(config=config)
     else:
-        replay_buffer = ReplayBuffer.remote(config=config)
+        replay_buffer = PrioritizedReplay.remote(config=config)
 
     # create a number of distributed worker 
     workers = [Worker.remote(worker_id, config, storage, replay_buffer) for worker_id in range(0, config.worker_number)]

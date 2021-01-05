@@ -53,7 +53,7 @@ def evaluation(config, shared_storage):
                     if done:
                         break
                 env.close()
-                print("Actor Steps: {} | Evaluation Rewards: {} | Learning Steps: {} ".format(counter, rewards, step))
+                print("Actor Steps: {} | Evaluation Rewards: {:.2f} | Learning Steps: {} ".format(counter, rewards, step))
                 shared_storage.set_eval_reward.remote(counter, step, rewards)
 
 
@@ -99,3 +99,40 @@ def train(config, summary_writer):
 
     ray.get(evals)
     return ray.get(storage.get_weights.remote())
+
+
+
+def test(config, actor_weights):
+    # build environment
+    env = gym.make(config.env)
+    config.state_size = env.observation_space.shape[0]
+    config.action_size = env.action_space.shape[0]
+    config.action_high = env.action_space.high
+    config.action_low = env.action_space.low
+    env.seed(config.seed)
+    action_high = config.action_high
+    action_low = config.action_low
+
+    # create actor based on config details
+    if config.d2rl == 1:
+        actor = DeepActor(config.state_size, config.action_size, noise=None, noise_type=config.noise, seed=config.seed, hidden_size=config.layer_size)
+    else:
+        actor = Actor(config.state_size, config.action_size, noise=None, noise_type=config.noise, seed=config.seed, hidden_size=config.layer_size)
+
+    # load_weights
+    actor.load_state_dict(torch.load(actor_weights))
+    actor.eval()
+    with torch.no_grad():
+            state = env.reset()
+            done = False
+            rewards = 0
+            env.render()
+            while not done:
+                action = actor.act(state)
+                action_clipped = np.clip(action*action_high, action_low, action_high)
+                state, reward, done, _ = env.step(action_clipped)
+                rewards += reward
+                if done:
+                    break
+            env.close()
+            print("\nTest Rewards: {}".format(rewards))

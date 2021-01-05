@@ -7,9 +7,8 @@ import torch
 import time
 from torch.utils.tensorboard import SummaryWriter
 import argparse
-from scripts.agent import Agent
 import json
-from scripts.training import train
+from scripts.training import train, test
 
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("--env", type=str,default="Pendulum-v0", help="Environment name, default = Pendulum-v0")
@@ -31,7 +30,7 @@ parser.add_argument("-repm", "--replay_memory", type=int, default=int(1e5), help
 parser.add_argument("-bs", "--batch_size", type=int, default=256, help="Batch size, default is 256")
 parser.add_argument("-t", "--tau", type=float, default=1e-2, help="Softupdate factor tau, default is 1e-3") #for per 1e-2 for regular 1e-3 -> Pendulum!
 parser.add_argument("-g", "--gamma", type=float, default=0.99, help="discount factor gamma, default is 0.99")
-parser.add_argument("--saved_model", type=str, default=None, help="Load a saved model to perform a test run!")
+parser.add_argument("--test", type=str, default=None, help="Load a saved model to perform a test run!")
 parser.add_argument("--worker_number", type=int, default=1, help="Number of parallel Worker to gather experience, default = 4")
 parser.add_argument("--checkpoint_interval", type=int, default=10, help="Number of Network Updates befor next Evaluation run, default 10")
 args = parser.parse_args()
@@ -43,18 +42,19 @@ def timer(start,end):
     print("\nTraining Time:  {:0>2}:{:0>2}:{:05.2f}".format(int(hours),int(minutes),seconds))
 
 if __name__ == "__main__":
-    ray.init()
-    writer = SummaryWriter("runs/"+args.info)
-    # if training
-    #take time
-    t0 = time.time()
-    trained_model = train(args, writer)
-    t1 = time.time()
-    time.sleep(1.5)
-    timer(t0, t1)
-    # else:
-        # load_weights
-        # evaluate
 
-    # if save model
-    # save_weights
+    # if training
+    if args.test == None:
+        ray.init()
+        writer = SummaryWriter("runs/"+args.info)
+        t0 = time.time()
+        trained_model = train(args, writer)
+        t1 = time.time()
+        time.sleep(1.5)
+        timer(t0, t1)
+        # save model
+        torch.save(trained_model, args.info+".pth")
+    else:
+        test(args, args.test)
+
+    

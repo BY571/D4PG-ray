@@ -154,7 +154,7 @@ class Learner():
             # Minimize the loss
             self.critic_optimizer.zero_grad()
             critic_loss.backward()
-            clip_grad_norm_(self.critic_local.parameters(), 1.)
+            clip_grad_norm_(self.critic_local.parameters(), 10.)
             self.critic_optimizer.step()
 
             # ---------------------------- update actor ---------------------------- #
@@ -249,7 +249,7 @@ class Learner():
                 # Minimize the loss
                 self.critic_optimizer.zero_grad()
                 critic_loss.backward()
-                clip_grad_norm_(self.critic_local.parameters(), 1)
+                clip_grad_norm_(self.critic_local.parameters(), 10.)
                 self.critic_optimizer.step()
 
                 # ---------------------------- update actor ---------------------------- #
